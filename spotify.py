@@ -21,15 +21,67 @@ class spotibot:
         """
         self.id = id
         self.secret = secret
-        client_credentials_manager = SpotifyClientCredentials(self.id, self.secret)
+        client_credentials_manager = SpotifyClientCredentials(client_id=self.id, client_secret=self.secret)
         self.sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
         self.playlist = playlist
         self.dataframe = dataframe
 
-    def getplaylist(self, playlist):
+        scope = 'user-library-read playlist-read-private'
+        token = util.prompt_for_user_token(username, scope)
+
+        if token:
+            self.sp = spotipy.Spotify(auth=token)
+        else:
+            print("Can't get token for", username)
+
+
+    def movePlaylist(self, source_user, source_playlist, target_user, target_playlist):
         """
-        Gets playlist and converts to Dataframe
+        Gets the playlist that will be analyzed and moves it into another playlist
+        for analysis. This method is much easier than the other getplaylistold method
         """
+        sourcePlaylist = sp.user_playlist(source_user, playlist)
+        trackList = sourcePlaylist["tracks"]
+        songList = trackList["items"]
+        while trackList['next']:
+            for item in trackList["items"]:
+                songList.append(item)
+
+        ids = []
+        for i in range(len(songs)):
+            sp.user_playlist_add_tracks(target_user, target_playlist, [songList[i]["track"]["id"]])
+
+
+    def getPlaylistSongId(self, user, playlist):
+        trackList = playlist["tracks"]
+        songList = tracks["items"]
+        while trackList["next"]:
+            trackList = sp.next(trackList)
+            for item in trackList["items"]:
+                songList.append(item)
+        songId = []
+        for i in range(len(songList)):
+            songId.append(songList[i]["track"]["id"])
+
+    def getAudioFeatures(self, songId):
+        audioFeatures = []
+        # Can only get upto 50 songs at once, so this is a workaround
+        for i in range(0, len(songId), 50):
+            features = sp.audio_features(good_ids[i:i+50])
+            for track in features:
+                audioFeatures.append(track)
+                audioFeatures[-1]["target"] = 1
+
+
+    def trainData(self, audioFeatures):
+        trainData = pd.DataFrame(features)
+        trainData.head()
+
+
+    """
+    Old playlist method. Slow and overly complicated.
+
+    def getplaylistold(self, playlist):
         results = sp.playlist(playlist)
 
         songs = [] #list of songs
@@ -54,3 +106,4 @@ class spotibot:
             sp_list['popularity'].append(metadata['popularity'])
 
         self.dataframe = pd.Dataframe.from_dict(sp_list)
+    """
